@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+data/*.db
+data/*.wav
+data/*.mp3
+data/*.m4a
+data/*.flac
+data/*.ogg
+models/
+wheelhouse/
+.playwright-mcp/
+.omc/
+.venv-app/
+# 실제 사내 문서는 저장소에 넣지 않는다(시연 샘플은 data/kb_samples)
+data/kb_docs/

@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AICC 상담지원</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#EDF1F5;--surface:#FFFFFF;--sunk:#F5F7FA;--ink:#172033;--muted:#5A6578;--faint:#8A94A6;--line:#D6DDE6;
+  --brand:#1D47B3;--brand-ink:#FFFFFF;--brand-soft:#E8EEFB;
+  --ok:#0E7A55;--ok-soft:#E3F3EC;--warn:#A86412;--warn-soft:#FBF0DF;--bad:#B8321F;--bad-soft:#FBE7E3;--unk:#8A94A6;
+  --r-sm:6px;--r-md:10px;--r-lg:14px;
+}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.6 "IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:3px solid #7EA2F2;outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* 공통 컨트롤 */
+button,select,input,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 12px}
+button{cursor:pointer;font-weight:500}button:hover:not(:disabled){border-color:var(--brand);color:var(--brand)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}button.primary:hover:not(:disabled){background:#173A94;color:#fff}
+button.danger{background:var(--bad);border-color:var(--bad);color:#fff}button.danger:hover:not(:disabled){background:#962818;color:#fff}
+button.quiet{background:transparent;border-color:transparent;color:var(--muted)}
+textarea{width:100%;min-height:72px}
+.muted{color:var(--muted)}.small{font-size:13px}.err{color:var(--bad)}
+.badge{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;background:var(--sunk);border:1px solid var(--line);color:var(--muted)}
+.badge.mock{background:var(--warn-soft);border-color:#E9C88F;color:var(--warn)}
+
+/* 머리글 */
+header{display:flex;gap:20px;align-items:center;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em}
+header h1 small{font-weight:500;color:var(--muted);margin-left:8px;font-size:13px}
+nav{display:flex;gap:2px;height:100%}
+nav button{border:0;border-radius:0;background:none;height:100%;padding:0 14px;color:var(--muted);border-bottom:3px solid transparent}
+nav button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--brand)}
+nav button:hover:not(:disabled){color:var(--ink)}
+main{padding:16px 24px 8px}.view{display:none}.view.active{display:block}
+
+/* ---------- 상담 화면 ---------- */
+.callbar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.pill{display:inline-flex;align-items:center;gap:9px;font-size:16px;font-weight:600;min-width:150px}
+.pill i{width:11px;height:11px;border-radius:50%;background:var(--unk)}
+.pill.live i{background:var(--ok);box-shadow:0 0 0 5px var(--ok-soft)}
+.pill.hold i{background:var(--warn);box-shadow:0 0 0 5px var(--warn-soft)}
+#callTimer{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}
+.callhint{flex:1;min-width:240px;color:var(--muted)}.callhint b{color:var(--ink);font-weight:600}
+.callbtns{display:flex;gap:8px}button.big{padding:9px 20px;font-size:15px;font-weight:600}
+.inputbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 4px;font-size:14px;color:var(--muted)}
+.inputbar > span,.inputbar > label{display:inline-flex;gap:6px;align-items:center}
+.file-playback{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;padding-top:4px}.file-playback audio{height:30px;max-width:360px}.file-playback .small{min-width:155px}
+.speaker-quick{display:inline-flex;gap:4px;align-items:center}.speaker-quick button{padding:5px 9px;font-size:13px}.speaker-quick button.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.inputbar meter{width:90px}
+.tools{margin-left:auto}.tools summary{cursor:pointer;color:var(--muted);font-size:13px}
+.tools[open]{flex-basis:100%;margin-left:0;background:var(--surface);border:1px dashed var(--line);border-radius:var(--r-md);padding:10px 14px}
+.toolrow{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}.toolrow #utt{flex:1;min-width:220px}
+#alerts .alert{display:flex;gap:12px;align-items:center;background:var(--warn-soft);border:1px solid #E9C88F;border-radius:var(--r-md);padding:9px 14px;margin-bottom:10px;font-size:14px}
+#alerts .alert b{color:var(--warn)}#alerts .alert button{margin-left:auto}
+
+.desk{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+@media(max-width:1100px){.desk{grid-template-columns:1fr}.desk > section + section{border-left:0!important;border-top:1px solid var(--line)}}
+.desk > section{padding:16px 18px;min-width:0;display:flex;flex-direction:column}
+.desk > section + section{border-left:1px solid var(--line)}
+.desk h2{font-size:15px;font-weight:600;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.desk h2 .aside{margin-left:auto;font-weight:400}
+.pane{overflow:auto;max-height:calc(100vh - 300px);min-height:380px;padding-right:4px}
+.desk > section.todo{background:linear-gradient(var(--brand-soft),var(--brand-soft)) top/100% 4px no-repeat,var(--surface)}
+
+.guide{color:var(--muted);line-height:1.8}.guide b{color:var(--ink)}.guide ol{padding-left:20px;margin:6px 0}
+.empty{color:var(--muted);padding:24px 4px}
+
+/* 대화 */
+.msg{display:flex;flex-direction:column;max-width:90%;margin:0 0 12px}
+.msg .who{font-size:12px;color:var(--faint);margin:0 4px 3px;display:flex;gap:8px}
+.msg .bubble{padding:9px 13px;border-radius:4px var(--r-lg) var(--r-lg) var(--r-lg);background:var(--sunk);border:1px solid var(--line)}
+.msg.customer .bubble{background:var(--brand-soft);border-color:#C9D6F5}
+.msg.agent{margin-left:auto;align-items:flex-end}.msg.agent .bubble{border-radius:var(--r-lg) 4px var(--r-lg) var(--r-lg);background:var(--surface)}
+.msg.latest .bubble{box-shadow:0 0 0 2px #9DB6EE}
+
+/* 진행 상황 */
+.topic{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.3;margin:0}
+.topicsub{margin:4px 0 14px;font-size:14px}
+.path-name{font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 2px}
+.stepper{list-style:none;padding:0 0 0 2px;margin:6px 0 4px}
+.stepper li{position:relative;padding:0 0 14px 30px}
+.stepper li::after{content:"";position:absolute;left:10px;top:22px;bottom:0;width:2px;background:var(--line)}
+.stepper li:last-child::after{display:none}
+.stepper li::before{content:"";position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:50%;background:var(--surface);border:2px solid var(--line);font-size:12px;font-weight:700;text-align:center;line-height:18px}
+.stepper li.done::before{content:"✓";background:var(--ok);border-color:var(--ok);color:#fff}
+.stepper li.ask::before{content:"?";background:var(--warn);border-color:var(--warn);color:#fff}
+.stepper li.now::before{background:var(--brand);border-color:var(--brand);box-shadow:inset 0 0 0 4px #fff}
+.stepper .k{font-size:13px;color:var(--muted)}.stepper .v{font-weight:600}
+.stepper .h{font-size:14px;margin-top:3px;padding:6px 10px;border-radius:var(--r-sm)}
+.stepper li.ask .h{background:var(--warn-soft);color:#7A4A0E}.stepper li.now .h{background:var(--brand-soft);color:#173A94}
+.also{font-size:14px;color:#7A4A0E;background:var(--warn-soft);border-radius:var(--r-sm);padding:6px 10px;margin:4px 0 0}
+.feelrow{display:flex;align-items:center;gap:10px;white-space:nowrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:14px}
+.feelrow .small{white-space:normal}
+.feel{padding:2px 12px;border-radius:99px;font-weight:600;font-size:13px;background:var(--sunk);color:var(--muted)}
+.feel.good{background:var(--ok-soft);color:var(--ok)}.feel.uneasy{background:var(--warn-soft);color:var(--warn)}.feel.angry{background:var(--bad-soft);color:var(--bad)}
+.why{margin-top:14px;font-size:13px;color:var(--muted)}.why summary{cursor:pointer}.why table{margin-top:6px}
+
+/* 지금 할 일 */
+.note{color:var(--muted);font-size:14px;margin:0 0 16px}
+.step{margin:0 0 20px}
+.step h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin:0 0 8px}
+.step h3 .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px}
+.say{position:relative;background:var(--brand);color:#fff;border-radius:4px var(--r-lg) var(--r-lg) var(--r-lg);padding:18px 20px 18px 46px;font-size:21px;font-weight:600;line-height:1.5;letter-spacing:-.01em}
+.say::before{content:"“";position:absolute;left:14px;top:4px;font-size:46px;line-height:1;color:#9DB6EE}
+.say-more{margin:2px 0 0;padding-left:20px;color:var(--muted);font-size:14px}
+.check{display:flex;gap:12px;align-items:center;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r-md);margin:6px 0;background:var(--surface)}
+.check span{flex:1}.check button{white-space:nowrap;font-size:13px;padding:5px 10px}
+.check button.done{color:var(--ok);border-color:transparent;background:var(--ok-soft)}
+.memo{margin-top:8px;font-size:14px;color:var(--muted)}.memo summary{cursor:pointer}.memo p{margin:6px 0}
+.refs details{border-top:1px solid var(--line);padding:8px 0}.refs details:last-child{border-bottom:1px solid var(--line)}
+.refs summary{cursor:pointer;font-weight:500}.refs p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;border-radius:50%;animation:sp .9s linear infinite;vertical-align:-1px;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.summary{white-space:pre-line;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;margin:8px 0 16px}
+.closing-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 16px}.closing-summary .sum-section{padding:11px 13px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md)}.closing-summary .sum-section:first-child{grid-column:1/-1;background:var(--brand-soft);border-color:#c9d6f5}.closing-summary h3{font-size:13px;margin:0 0 5px;color:var(--muted)}.closing-summary ul{margin:0;padding-left:18px;font-size:14px}.closing-summary li+li{margin-top:3px}
+@media(max-width:720px){.closing-summary{grid-template-columns:1fr}}
+
+/* ---------- CRM / 모니터링 ---------- */
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}
+.grid2{display:grid;grid-template-columns:2fr 3fr;gap:12px}
+@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;min-width:0}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h3{font-size:13px;color:var(--muted);font-weight:600;margin:16px 0 6px}
+.scroll{max-height:62vh;overflow:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;color:var(--muted);font-size:13px}
+.stat b{display:block;font-size:24px;color:var(--ink);font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500}tr.click{cursor:pointer}tr.click:hover{background:var(--sunk)}tr.sel{background:var(--brand-soft)!important}
+.who-customer{color:var(--brand)}.who-agent{color:var(--ok)}.who-unknown{color:var(--muted)}
+.s-healthy{color:var(--ok)}.s-degraded{color:var(--warn)}.s-unavailable{color:var(--bad)}.s-unknown{color:var(--unk)}
+.wf{position:relative;height:12px;background:var(--sunk);border-radius:3px}.wf span{position:absolute;height:100%;background:var(--brand);border-radius:3px}
+.wf span.error,.wf span.timeout{background:var(--bad)}
+.mon-kpis{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin:12px 0}.mon-kpi{padding:13px 15px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}.mon-kpi small{color:var(--muted)}.mon-kpi b{display:block;font-size:25px;line-height:1.35;font-variant-numeric:tabular-nums}.mon-kpi .bad{color:var(--bad)}
+.chart-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin-bottom:12px}.chart-card{min-height:218px}.chart-card h2 span{font-size:12px;font-weight:400;color:var(--muted)}.apm-chart{width:100%;height:158px;display:block}.apm-chart .grid{stroke:var(--line);stroke-width:1}.apm-chart .line{fill:none;stroke:var(--brand);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}.apm-chart .line.error{stroke:var(--bad)}.apm-chart text{fill:var(--muted);font:11px "IBM Plex Sans KR",sans-serif}.chart-key{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--muted)}.chart-key i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;background:var(--brand)}.chart-key i.error{background:var(--bad)}.chart-empty{height:158px;display:grid;place-items:center;color:var(--muted);font-size:13px}
+@media(max-width:900px){.mon-kpis{grid-template-columns:repeat(2,1fr)}.chart-grid{grid-template-columns:1fr}}
+
+button,.badge,nav button,.pill{white-space:nowrap}
+@media(max-width:720px){
+  header{height:auto;flex-wrap:wrap;padding:8px 16px;gap:4px 12px}
+  header h1 small{display:none}
+  nav{height:40px;order:3;flex-basis:100%}
+  main{padding:12px 16px 8px}
+  .callbar{gap:10px}.pill{min-width:0}.callbtns{flex-basis:100%}.callbtns button{flex:1}
+  .pane{max-height:none;min-height:160px}
+  .say{font-size:18px}
+  .desk > section.todo{order:-1;border-bottom:1px solid var(--line)}
+  .inputbar input[type=file]{max-width:100%;min-width:0}.inputbar > span{flex-wrap:wrap}
+  footer{padding:10px 16px 16px}
+}
+footer{display:flex;gap:18px;flex-wrap:wrap;padding:10px 24px 16px;font-size:13px;color:var(--muted)}
+footer .disclaimer{margin-left:auto}
+#toast{position:fixed;right:20px;bottom:20px;max-width:420px;padding:11px 16px;border-radius:var(--r-md);display:none;font-size:14px;box-shadow:0 6px 24px rgba(23,32,51,.16)}
+</style>
+</head>
+<body>
+<header>
+  <h1>AICC 상담지원<small>서울신용보증재단</small></h1>
+  <nav><button data-view="aicc" class="active">상담</button><button data-view="crm">상담 기록</button><button data-view="mon">시스템 상태</button></nav>
+  <span id="modeBadge" class="badge mock">시연 모드</span>
+  <span style="margin-left:auto" class="small muted">상담원 <select id="me"></select></span>
+</header>
+<main>
+<!-- ================= 상담 ================= -->
+<section id="aicc" class="view active">
+  <div class="callbar">
+    <span id="callPill" class="pill"><i></i><span id="callState">대기</span><span id="callTimer"></span></span>
+    <span id="callHint" class="callhint"></span>
+    <span class="callbtns">
+      <button class="primary big" id="newBtn">상담 시작</button>
+      <button class="big" id="pauseBtn" hidden>보류</button>
+      <button class="danger big" id="endBtn" hidden>상담 종료</button>
+    </span>
+  </div>
+  <div class="inputbar">
+    <label>음성 입력 <select id="inputMode"><option value="simulation">샘플 대화</option><option value="file">음성 파일</option><option value="microphone">마이크</option></select></label>
+    <span id="srcSim"><select id="scenario"></select><button id="nextLine" disabled>다음 발화</button><button id="playAll" disabled>전체 재생</button></span>
+    <span id="srcFile" hidden><input type="file" id="audioFile" accept=".wav,.mp3,.m4a,.flac,.ogg"><button id="uploadBtn" disabled>재생·분석 시작</button><span id="mockFileNote" class="small" hidden style="color:var(--warn)">샘플 모드라 파일 내용은 인식하지 않고 고른 샘플 대화를 재생합니다.</span><span class="file-playback"><audio id="filePlayer" controls hidden></audio><span id="fileProgress" class="small muted">파일을 고르세요.</span></span></span>
+    <span id="srcMic" hidden><button id="micBtn" disabled>녹음 시작</button><meter id="micLv" min="0" max="0.1" value="0" title="입력 크기"></meter><span id="micInfo" class="small">대기</span></span>
+    <label id="speakerBox" hidden>현재 발화자 <select id="speaker"><option value="unknown" selected>구분 안 함</option><option value="customer">고객</option><option value="agent">상담원</option></select></label>
+    <span id="speakerQuick" class="speaker-quick" hidden><button type="button" data-speaker="customer">고객 발화</button><button type="button" data-speaker="agent">상담원 발화</button><button type="button" data-speaker="unknown">구분 안 함</button></span>
+    <details class="tools"><summary>시연 도구</summary>
+      <div class="toolrow"><select id="uttSpeaker" aria-label="말하는 사람"><option value="customer">고객</option><option value="agent">상담원</option></select><input id="utt" placeholder="발화를 직접 입력하고 Enter"><button id="sendUtt" disabled>입력</button></div>
+      <div class="toolrow">장애 시연 <select id="inject"><option value="">없음</option><option value="coach:timeout">직원 안내 응답 지연</option><option value="coach:unavailable">직원 안내 중단</option><option value="decider:unavailable">상담 분석 중단</option><option value="knowledge:bad_response">참고 자료 검색 오류</option></select></div>
+      <div class="toolrow">마이크 감도 <input type="range" id="micTh" min="0.002" max="0.05" step="0.001" value="0.012" aria-label="마이크 감도"> 말을 멈추고 <input type="number" id="micSil" min="0.3" max="2" step="0.1" value="0.7" style="width:64px">초 뒤 문장 확정</div>
+      <p class="small muted">마이크와 파일 입력은 말이 멈춘 지점에서 문장을 나눠 인식합니다. 마이크는 하나의 음원만 수집하므로 섞인 통화 음성의 자동 화자 분리는 하지 않습니다. 현재 발화자를 바꾸면 직전 구간을 확정해 고객·상담원 기록을 분리합니다. 음성 원본은 저장하지 않습니다.</p>
+    </details>
+  </div>
+  <div id="alerts"></div>
+  <div class="desk">
+    <section><h2>대화 내용</h2><div id="transcript" class="pane"></div></section>
+    <section><h2>상담 진행 상황</h2><div id="decision" class="pane"></div></section>
+    <section class="todo"><h2><span id="todoTitle">지금 할 일</span> <span id="coachStatus" class="aside small muted"></span></h2><div id="coach" class="pane"></div></section>
+  </div>
+</section>
+
+<!-- ================= 상담 기록 (CRM) ================= -->
+<section id="crm" class="view">
+  <div class="stats" id="dash"></div>
+  <div class="bar" style="margin-top:12px">
+    <select id="fStatus"><option value="">전체 상태</option><option value="active">진행 중</option><option value="paused">보류</option><option value="completed">종료</option></select>
+    <select id="fTopic"><option value="">전체 주제</option></select>
+    <select id="fEmp"><option value="">전체 담당자</option></select>
+    <select id="fTask"><option value="">후속 업무 전체</option><option value="open">할 일</option><option value="in_progress">진행 중</option><option value="blocked">막힘</option><option value="completed">완료</option><option value="cancelled">취소</option></select>
+    <select id="fCust"><option value="">전체 고객</option></select>
+    <input type="date" id="fFrom" aria-label="시작일"><input type="date" id="fTo" aria-label="종료일">
+    <button id="crmSearch">조회</button><span id="pager" class="small"></span>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>상담 목록</h2><div class="scroll"><table><thead><tr><th>시작</th><th>상태</th><th>주제</th><th>고객</th><th>담당</th><th>검토</th><th>업무</th></tr></thead><tbody id="sessRows"></tbody></table></div></div>
+    <div class="card"><h2>상담 상세</h2><div id="detail" class="scroll"><p class="muted">왼쪽 목록에서 상담을 고르세요.</p></div></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h2>후속 업무 <label class="small"><input type="checkbox" id="overdueOnly"> 기한 지난 것만</label></h2><div class="scroll"><table><thead><tr><th>제목</th><th>고객</th><th>담당</th><th>기한</th><th>우선</th><th>상태</th><th>출처</th></tr></thead><tbody id="taskRows"></tbody></table></div></div>
+    <div class="card"><h2>고객 상담 이력</h2><div id="custTimeline" class="small"><p class="muted">위에서 고객을 고르고 조회하세요.</p></div></div>
+  </div>
+</section>
+
+<!-- ================= 시스템 상태 ================= -->
+<section id="mon" class="view">
+  <div class="bar"><span id="monUpdated" class="small muted"></span>
+    <select id="mService"><option value="">전체 서비스</option></select>
+    <select id="mStatus"><option value="">전체 결과</option><option>success</option><option>error</option><option>timeout</option><option>cancelled</option></select>
+    <input id="mSession" placeholder="세션 ID"><input id="mTrace" placeholder="trace ID"><select id="mMinutes"><option value="5">5분</option><option value="60" selected>1시간</option><option value="1440">24시간</option></select>
+  </div>
+  <div class="stats" id="svcCards"></div>
+  <div class="mon-kpis" id="monKpis"></div>
+  <div class="chart-grid">
+    <div class="card chart-card"><h2>요청량과 오류 <span id="reqChartNote"></span></h2><div class="chart-key"><span><i></i>요청</span><span><i class="error"></i>오류</span></div><div id="reqChart"></div></div>
+    <div class="card chart-card"><h2>p95 지연시간 <span id="latChartNote"></span></h2><div class="chart-key"><span><i></i>밀리초</span></div><div id="latChart"></div></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h2>서비스별 호출 현황</h2><div id="monStats"></div></div>
+    <div class="card"><h2>최근 오류</h2><div class="scroll"><table><thead><tr><th>시각</th><th>서비스</th><th>작업</th><th>코드</th><th>trace</th></tr></thead><tbody id="errRows"></tbody></table></div></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h2>API 호출 목록</h2><div class="scroll"><table><thead><tr><th>시각</th><th>서비스</th><th>작업</th><th>구분</th><th>결과</th><th>ms</th></tr></thead><tbody id="reqRows"></tbody></table></div></div>
+    <div class="card"><h2>요청 흐름 상세</h2><div id="traceView" class="small"><p class="muted">호출을 고르면 같은 요청의 단계별 소요 시간을 보여 줍니다.</p></div></div>
+  </div>
+</section>
+</main>
+<footer>
+  <span id="wsState">연결 대기</span>
+  <span id="lastBeat"></span>
+  <span class="disclaimer">AI 안내는 참고용입니다. 자격·한도·승인 여부는 업무시스템과 담당 직원이 확인합니다.</span>
+</footer>
+<div id="toast" role="status"></div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const t = iso => iso ? new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z").toLocaleString() : "-";
+const hm = iso => new Date(iso).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+const uniq = a => [...new Set(a.filter(Boolean))];
+const uniqBy = (a, f) => [...new Map(a.map(x => [f(x), x])).values()];
+const KO = {customer:"고객", agent:"상담원", unknown:"구분 안 함"};
+const speakerName = speaker => KO[speaker] || (speaker.startsWith("speaker_") ? `화자 ${speaker.slice(8)}` : "구분 안 함");
+const SCEN_KO = {extension:"만기·연장 문의", progress:"진행상태·재연락 요청", urgent_delay:"처리 지연·긴급 자금", overdue:"연체·분할상환 요청", documents:"신청 서류 문의"};
+const SVC_KO = {asr:"음성 인식", decider:"상담 분석", knowledge:"참고 자료 검색", coach:"직원 안내", crm:"CRM 연계", db:"기록 저장", backend:"서버"};
+const ERR_KO = {UPSTREAM_TIMEOUT:"응답이 늦어 중단됐습니다.", UPSTREAM_UNAVAILABLE:"연결되지 않습니다.", UPSTREAM_BAD_RESPONSE:"잘못된 응답을 받았습니다.",
+  SCHEMA_VALIDATION_FAILED:"응답 형식이 맞지 않습니다.", AUDIO_FORMAT_UNSUPPORTED:"지원하지 않는 음성 형식입니다.", REQUEST_CANCELLED:"취소됐습니다."};
+const FALLBACK = {decider:"상담 진행 상황이 갱신되지 않을 수 있습니다. 대화는 계속 기록됩니다.",
+  knowledge:"참고 자료 없이 진행하세요.", asr:"파일 형식이나 마이크 연결을 확인하세요."};
+let meta, employees = [], customers = [];
+
+function toast(msg, ok){ const el=$("#toast"); el.textContent=msg; el.style.display="block"; el.style.background = ok ? "var(--ok-soft)" : "var(--bad-soft)"; el.style.color = ok ? "var(--ok)" : "var(--bad)"; clearTimeout(toast.h); toast.h=setTimeout(()=>el.style.display="none",6000); }
+async function api(method, url, body, isForm){
+  const headers = {}; if ($("#me").value) headers["X-Employee-Id"] = $("#me").value;
+  if (body && !isForm) headers["Content-Type"] = "application/json";
+  const r = await fetch(url, {method, headers, body: isForm ? body : body && JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = data.error || {}; toast(`${e.message || "요청을 처리하지 못했습니다."} (${e.code || r.status})`); throw new Error(e.code); }
+  return data;
+}
+function openTab(name){
+  document.querySelectorAll("nav button,.view").forEach(x => x.classList.remove("active"));
+  $(`nav button[data-view=${name}]`).classList.add("active"); $("#" + name).classList.add("active");
+  if (name === "crm") loadCrm(); if (name === "mon") loadMon();
+  if (name === "aicc" && S.status === "completed") api("GET", `/api/v1/sessions/${S.sid}`).then(r => { S.reviewStatus = r.review_status; render(); setButtons(); });
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => openTab(b.dataset.view));
+
+/* ================= 상담 ================= */
+const S = {sid:null, status:null, ws:null, finals:[], routing:null, routingAt:null, refs:[], coach:null, coachState:"idle", errors:{}, emotion:null,
+           registered:new Set(), startedAt:null, endedAt:null, summary:null, lineIdx:0};
+function resetSession(){ $("#utt").value = ""; stopFilePlayback(); Object.assign(S, {seen:new Set(), finals:[], routing:null, routingAt:null, refs:[], coach:null, coachState:"idle", errors:{}, emotion:null,
+  registered:new Set(), startedAt:Date.now(), endedAt:null, summary:null, lineIdx:0}); }
+const mode = () => $("#inputMode").value;
+function setButtons(){
+  const st = S.status, active = st === "active", live = active || st === "paused";
+  $("#newBtn").hidden = live; $("#newBtn").textContent = S.sid ? "새 상담 시작" : "상담 시작";
+  $("#pauseBtn").hidden = $("#endBtn").hidden = !live; $("#pauseBtn").textContent = st === "paused" ? "상담 재개" : "보류";
+  ["#nextLine","#playAll","#sendUtt","#uploadBtn","#micBtn"].forEach(id => $(id).disabled = !active);
+  $("#inputMode").disabled = live;
+  $("#callPill").className = "pill " + (active ? "live" : st === "paused" ? "hold" : "");
+  $("#callState").textContent = {active:"상담 중", paused:"보류 중", completed:"상담 종료"}[st] || "대기";
+  const how = {simulation:"<b>다음 발화</b>나 <b>전체 재생</b>으로 샘플 대화를 들려주세요.", file:"음성 파일을 고르고 <b>재생·분석 시작</b>을 누르세요.",
+               microphone:"<b>녹음 시작</b>을 누르고 고객과 대화하세요."}[mode()];
+  $("#callHint").innerHTML = !S.sid ? `음성 입력 방식을 고른 뒤 <b>상담 시작</b>을 누르세요.`
+    : st === "paused" ? "보류 중에는 새 대화를 받지 않습니다. <b>상담 재개</b>를 누르면 이어집니다."
+    : st === "completed" ? (S.reviewStatus && S.reviewStatus !== "unreviewed" ? "검토까지 마쳤습니다. <b>새 상담 시작</b>을 누르면 다음 상담을 받을 수 있습니다." : "요약을 확인하고 <b>상담 기록에서 검토하기</b>로 마무리하세요.")
+    : S.finals.length ? "AI가 대화를 듣고 있습니다. <b>지금 할 일</b>을 보며 상담을 이어가세요." : how;
+  if (!active && mic.on) stopMic();
+  tick();
+}
+function tick(){
+  if (!S.startedAt) return $("#callTimer").textContent = "";
+  const s = Math.floor(((S.endedAt || Date.now()) - S.startedAt) / 1000);
+  $("#callTimer").textContent = `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+}
+setInterval(() => { if (S.status === "active" || S.status === "paused") tick(); }, 1000);
+$("#inputMode").onchange = () => {
+  const v = mode();
+  $("#srcSim").hidden = v !== "simulation"; $("#srcFile").hidden = v !== "file"; $("#srcMic").hidden = v !== "microphone";
+  $("#speakerBox").hidden = v === "simulation";
+  $("#speakerQuick").hidden = v !== "microphone";
+  // 샘플 ASR(mock)일 때만 파일 입력도 시나리오를 쓴다
+  (v === "file" && meta.asr === "mock" ? $("#srcFile") : $("#srcSim")).prepend($("#scenario"));
+  $("#mockFileNote").hidden = meta.asr !== "mock";
+  setButtons(); render();
+};
+$("#newBtn").onclick = async () => {
+  if (S.ws) S.ws.close();
+  const r = await api("POST", "/api/v1/sessions", {input_mode: mode(), assigned_employee_id: $("#me").value || null});
+  resetSession(); S.sid = r.session_id; S.status = r.status; setButtons(); connect(); render();
+};
+$("#pauseBtn").onclick = async () => { const r = await api("POST", `/api/v1/sessions/${S.sid}/${S.status === "paused" ? "resume" : "pause"}`); S.status = r.status; setButtons(); };
+$("#endBtn").onclick = async () => {
+  if (mic.on) await stopMic();
+  const r = await api("POST", `/api/v1/sessions/${S.sid}/end`); S.status = r.status; S.endedAt = Date.now(); S.summary = r.ai_summary || ""; S.reviewStatus = r.review_status; S.errors = {}; setButtons(); render();
+};
+function inject(){ const v = $("#inject").value; if (!v) return null; const [svc, kind] = v.split(":"); return {[svc]: kind}; }
+async function send(text, speaker){ S.coachState = "busy"; renderCoach(); try { await api("POST", `/api/v1/sessions/${S.sid}/simulate`, {text, speaker, inject_error: inject()}); } catch(e) {} }
+$("#sendUtt").onclick = () => { const v = $("#utt").value.trim(); if (v) { send(v, $("#uttSpeaker").value); $("#utt").value = ""; } };
+$("#utt").onkeydown = e => { if (e.key !== "Enter") return; if (S.status !== "active") return toast(S.status === "paused" ? "보류 중에는 입력할 수 없습니다. 상담 재개를 누르세요." : "먼저 상담을 시작하세요."); $("#sendUtt").click(); };
+$("#nextLine").onclick = async () => { const lines = meta.scripts[$("#scenario").value];
+  if (S.lineIdx >= lines.length) return toast("샘플 대화를 끝까지 재생했습니다. 다른 샘플을 고르거나 새 상담을 시작하세요.");
+  const l = lines[S.lineIdx++]; await send(l.text, l.speaker); };
+$("#playAll").onclick = async () => { const lines = meta.scripts[$("#scenario").value];
+  while (S.lineIdx < lines.length && S.status === "active") { const l = lines[S.lineIdx++]; await send(l.text, l.speaker); await new Promise(r => setTimeout(r, 700)); }
+  if (S.lineIdx >= lines.length) toast("샘플 대화를 끝까지 재생했습니다.", true); };
+$("#scenario").onchange = () => S.lineIdx = 0;
+let fileUrl = null;
+const fmtDuration = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+function stopFilePlayback(){
+  const player = $("#filePlayer"); player.pause(); player.removeAttribute("src"); player.hidden = true;
+  if (fileUrl) URL.revokeObjectURL(fileUrl); fileUrl = null;
+}
+function startFilePlayback(file){
+  stopFilePlayback(); const player = $("#filePlayer"); fileUrl = URL.createObjectURL(file); player.src = fileUrl; player.hidden = false;
+  const progress = () => $("#fileProgress").textContent = Number.isFinite(player.duration) ? `재생 ${fmtDuration(player.currentTime)} / ${fmtDuration(player.duration)}` : "재생 준비 중";
+  player.ontimeupdate = progress; player.onloadedmetadata = progress; player.onended = () => { progress(); $("#fileProgress").textContent += " · 재생 완료"; };
+  return player.play().catch(() => { $("#fileProgress").textContent = "재생 버튼을 눌러 오디오를 시작하세요."; });
+}
+async function fileForAnalysis(file){
+  if (!file.name.toLowerCase().endsWith(".m4a")) return file;
+  $("#fileProgress").textContent = "재생 중 · 분석용 음성 변환 중";
+  const ctx = new AudioContext(), decoded = await ctx.decodeAudioData(await file.arrayBuffer());
+  const rendered = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+  const source = rendered.createBufferSource(); source.buffer = decoded; source.connect(rendered.destination); source.start();
+  const pcm = await rendered.startRendering(); await ctx.close();
+  return new File([wav(pcm.getChannelData(0), 16000)], file.name.replace(/\.m4a$/i, ".wav"), {type:"audio/wav"});
+}
+$("#uploadBtn").onclick = async () => {
+  const f = $("#audioFile").files[0]; if (!f) return toast("분석할 음성 파일을 먼저 고르세요.");
+  S.coachState = "busy"; startFilePlayback(f); render();
+  let analysisFile; try { analysisFile = await fileForAnalysis(f); } catch (e) { return toast("이 브라우저에서 M4A를 분석용 음성으로 변환하지 못했습니다. WAV 파일을 사용해 주세요."); }
+  const fd = new FormData(); fd.append("file", analysisFile);
+  const r = await api("POST", `/api/v1/sessions/${S.sid}/audio?scenario=${encodeURIComponent($("#scenario").value)}&speaker=${$("#speaker").value}`, fd, true);
+  toast(r.asr === "mock" ? "샘플 대화 재생과 분석을 시작했습니다." : `음성 ${r.audio_seconds ?? ""}초 재생과 분석을 시작했습니다. 재생 위치보다 늦게 도착한 분석은 실제 지연으로 표시됩니다.`, true);
+};
+
+/* 브라우저 마이크: 20ms 음량 기준으로 말이 멈춘 곳에서 문장을 나눠 WAV로 업로드 */
+const mic = {on:false, ctx:null, stream:null, node:null, frames:[], preroll:[], quiet:0, queue:Promise.resolve(), pending:0, speaker:"unknown"};
+function syncSpeakerControls(){
+  document.querySelectorAll("[data-speaker]").forEach(b => b.classList.toggle("active", b.dataset.speaker === $("#speaker").value));
+}
+function switchSpeaker(speaker){
+  if (mic.on) sealSegment();  // 화자 전환 전까지의 발화를 이전 화자로 확정한다.
+  $("#speaker").value = speaker; mic.speaker = speaker; syncSpeakerControls(); micInfo();
+}
+$("#speaker").onchange = () => switchSpeaker($("#speaker").value);
+document.querySelectorAll("[data-speaker]").forEach(b => b.onclick = () => switchSpeaker(b.dataset.speaker));
+function wav(samples, rate){
+  const b = new ArrayBuffer(44 + samples.length * 2), v = new DataView(b), w = (o, str) => [...str].forEach((c,i) => v.setUint8(o+i, c.charCodeAt(0)));
+  w(0,"RIFF"); v.setUint32(4, 36 + samples.length*2, true); w(8,"WAVE"); w(12,"fmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate*2, true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,"data"); v.setUint32(40, samples.length*2, true);
+  samples.forEach((x,i) => v.setInt16(44+i*2, Math.max(-1, Math.min(1, x)) * 0x7fff, true));
+  return new Blob([b], {type:"audio/wav"});
+}
+const micInfo = () => $("#micInfo").textContent = mic.pending ? `인식 중 ${mic.pending}건` : mic.on ? "듣는 중" : "대기";
+function sealSegment(){
+  if (!mic.frames.length) return;
+  const n = mic.frames.reduce((a,f) => a + f.length, 0), all = new Float32Array(n); let o = 0;
+  mic.frames.forEach(f => { all.set(f, o); o += f.length; }); mic.frames = []; mic.quiet = 0;
+  if (n < mic.ctx.sampleRate * 0.3) return;  // 0.3초 미만 잡음
+  const fd = new FormData(); fd.append("file", wav(all, mic.ctx.sampleRate), "segment.wav");
+  const sid = S.sid, speaker = mic.speaker; mic.pending++; micInfo(); S.coachState = "busy"; renderCoach();
+  // 확정 순서 보장: 이전 구간 인식이 끝난 뒤 전송
+  mic.queue = mic.queue.then(() => api("POST", `/api/v1/sessions/${sid}/audio-segment?speaker=${speaker}`, fd, true)).catch(() => {})
+    .finally(() => { mic.pending--; micInfo(); });
+}
+async function startMic(){
+  try { mic.stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
+  catch (e) { return toast("마이크를 쓸 수 없습니다. 브라우저 주소창에서 마이크 권한을 허용하세요(localhost 또는 HTTPS 필요)."); }
+  mic.speaker = $("#speaker").value; syncSpeakerControls(); mic.ctx = new AudioContext(); const src = mic.ctx.createMediaStreamSource(mic.stream);
+  // ponytail: ScriptProcessorNode(구식이지만 단순). 오디오 끊김이 보이면 AudioWorklet으로 교체
+  mic.node = mic.ctx.createScriptProcessor(4096, 1, 1); const fl = Math.round(mic.ctx.sampleRate * 0.02);
+  let rest = new Float32Array(0);
+  mic.node.onaudioprocess = ev => {
+    const inp = ev.inputBuffer.getChannelData(0), buf = new Float32Array(rest.length + inp.length); buf.set(rest); buf.set(inp, rest.length);
+    const th = +$("#micTh").value, silenceFrames = Math.round(+$("#micSil").value / 0.02), maxFrames = 600; let pos = 0;
+    for (; pos + fl <= buf.length; pos += fl) {
+      const f = buf.slice(pos, pos + fl), rms = Math.sqrt(f.reduce((a,x) => a + x*x, 0) / fl), voiced = rms >= th;
+      $("#micLv").value = rms;
+      if (!mic.frames.length) { if (!voiced) { mic.preroll.push(f); if (mic.preroll.length > 10) mic.preroll.shift(); continue; } mic.frames = mic.preroll; mic.preroll = []; }
+      mic.frames.push(f); mic.quiet = voiced ? 0 : mic.quiet + 1;
+      if (mic.quiet >= silenceFrames || mic.frames.length >= maxFrames) sealSegment();
+    }
+    rest = buf.slice(pos);
+  };
+  src.connect(mic.node); mic.node.connect(mic.ctx.destination);
+  mic.on = true; $("#micBtn").textContent = "녹음 중지"; micInfo();
+}
+async function stopMic(){
+  if (!mic.on) return; mic.on = false; sealSegment();  // 마지막 문장도 확정
+  mic.node.disconnect(); mic.stream.getTracks().forEach(t => t.stop()); await mic.ctx.close();
+  $("#micBtn").textContent = "녹음 시작"; $("#micLv").value = 0; micInfo();
+  await mic.queue;
+}
+$("#micBtn").onclick = () => mic.on ? stopMic() : startMic();
+
+function connect(){
+  const sid = S.sid, ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/v1/sessions/${sid}/stream`);
+  S.ws = ws; $("#wsState").textContent = "실시간 연결 중";
+  ws.onopen = () => $("#wsState").textContent = "실시간 연결됨";
+  ws.onclose = () => { $("#wsState").textContent = "실시간 연결 끊김, 다시 연결하는 중"; if (S.sid === sid && S.ws === ws && ["active","paused"].includes(S.status)) setTimeout(() => { if (S.ws === ws) connect(); }, 2000); else $("#wsState").textContent = "실시간 연결 종료"; };
+  ws.onmessage = m => { const e = JSON.parse(m.data); if (e.id && S.seen.has(e.id)) return; if (e.id) S.seen.add(e.id); onEvent(e); };
+}
+function onEvent(e){
+  if (e.type === "heartbeat") { if (S.status !== e.status) { S.status = e.status; setButtons(); } $("#lastBeat").textContent = "마지막 갱신 " + new Date().toLocaleTimeString(); return; }
+  const d = e.data;
+  if (e.type === "transcript") { S.finals.push(e); S.coachState = meta.coach_mode === "off" ? "off" : "busy"; delete S.errors.asr; setButtons(); }
+  else if (e.type === "analysis.routing") { S.routing = d; S.routingAt = e.at; delete S.errors.decider; }
+  else if (e.type === "analysis.sentiment_text") S.emotion = d.result.answers;
+  else if (e.type === "analysis.knowledge") S.refs = d.result.references || [];
+  else if (e.type === "coach") {
+    if (d.generation_status === "success") { S.coach = d; S.coachState = "ready"; }
+    else if (d.generation_status === "failed") S.coachState = "failed";
+  }
+  else if (e.type === "error" && d.service in FALLBACK && S.status !== "completed") S.errors[d.service] = d;
+  else if (e.type === "session_ended" && S.summary === null) api("GET", `/api/v1/sessions/${S.sid}`).then(s => { S.summary = s.ai_summary || ""; render(); });
+  render();
+}
+function render(){ renderAlerts(); renderTranscript(); renderDecision(); renderCoach(); }
+
+function renderAlerts(){
+  $("#alerts").innerHTML = Object.entries(S.errors).map(([svc, d]) =>
+    `<div class="alert" role="alert"><span><b>${SVC_KO[svc]}</b> ${esc(ERR_KO[d.error_code] || "오류가 발생했습니다.")} ${FALLBACK[svc]}</span><button class="quiet" data-dismiss="${svc}">닫기</button></div>`).join("");
+  $("#alerts").querySelectorAll("[data-dismiss]").forEach(b => b.onclick = () => { delete S.errors[b.dataset.dismiss]; renderAlerts(); });
+}
+
+function renderTranscript(){
+  const el = $("#transcript");
+  if (!S.sid) return el.innerHTML = `<div class="guide"><b>상담은 이렇게 진행됩니다</b><ol>
+    <li>위에서 음성 입력 방식을 고르고 <b>상담 시작</b>을 누릅니다.</li><li>고객과 상담원의 대화가 이곳에 문장 단위로 나타납니다.</li>
+    <li>가운데에서 AI가 파악한 상담 주제와 진행 단계를 확인합니다.</li><li>오른쪽 <b>지금 할 일</b>에 고객에게 할 질문과 업무시스템에서 확인할 일이 정리됩니다.</li></ol></div>`;
+  if (!S.finals.length) return el.innerHTML = `<p class="empty">아직 인식된 대화가 없습니다.</p>`;
+  el.innerHTML = S.finals.map((e, i) => `<div class="msg ${e.data.speaker}${i === S.finals.length - 1 ? " latest" : ""}">
+    <span class="who"><span>${speakerName(e.data.speaker)}</span><time>${hm(e.at)}</time></span><div class="bubble">${esc(e.data.text)}</div></div>`).join("");
+  el.scrollTop = el.scrollHeight;
+}
+
+function stepper(p){
+  const rows = [`<li class="done"><div class="k">상담 주제</div><div class="v">${esc(p.topic)}</div></li>`];
+  p.steps.forEach(s => {
+    const ok = s.certain && s.choice !== "확인 필요";
+    rows.push(ok ? `<li class="done"><div class="k">${esc(s.title)}</div><div class="v">${esc(s.choice)}</div></li>`
+      : `<li class="ask"><div class="k">${esc(s.title)}</div><div class="v">아직 확인되지 않음</div>${p.next_question ? `<div class="h">고객에게 물어보세요: ${esc(p.next_question)}</div>` : ""}</li>`);
+  });
+  if (p.action) rows.push(`<li class="now"><div class="k">지금 단계</div><div class="v">${esc(p.destination)}</div></li>`);
+  return `<ol class="stepper">${rows.join("")}</ol>`;
+}
+function splitComplaintPaths(paths){
+  const complaints = paths.filter(p => p.topic === "불만·민원"), work = paths.filter(p => p.topic !== "불만·민원");
+  return work.length ? {work, complaints} : {work:paths, complaints:[]};
+}
+function feelHtml(){
+  if (!S.emotion) return "";
+  const c = S.emotion.emotion.choice, n = S.emotion.negative_intensity.score;
+  const cls = c === "분노" || n >= 2.5 ? "angry" : ["불만","불안","슬픔"].includes(c) || n >= 1.5 ? "uneasy" : c === "만족/기쁨" ? "good" : "";
+  const level = n >= 2.5 ? "강함" : n >= 1.5 ? "보통" : n >= 0.5 ? "약함" : "없음";
+  return `<div class="feelrow"><span>고객 감정</span><span class="feel ${cls}">${esc(c)}</span><span class="small muted">부정 표현 ${level}. 말의 내용으로만 추정하며 목소리는 분석하지 않습니다.</span></div>`;
+}
+function renderDecision(){
+  const el = $("#decision");
+  if (!S.sid) return el.innerHTML = `<p class="empty">대화가 들어오면 AI가 상담 주제와 진행 단계를 정리합니다.</p>`;
+  if (!S.routing) return el.innerHTML = `<p class="empty">${S.finals.length ? '<span class="spin"></span>대화를 분석하고 있습니다.' : "대화를 기다리고 있습니다."}</p>` + feelHtml();
+  const r = S.routing.result, allPaths = r.paths || [], {work:paths, complaints} = splitComplaintPaths(allPaths);
+  const pending = paths.some(p => p.status === "추가 확인 필요");
+  const unsure = (r.topics || []).filter(x => !paths.some(p => p.topic === x.topic) && (x.choice === "확인 필요" || (x.choice === "해당" && !x.certain))).map(x => x.topic);
+  const head = paths.length
+    ? `<p class="topic">${paths.map(p => esc(p.topic)).join(", ")}</p><p class="topicsub ${pending ? "" : "muted"}">${pending ? "확인이 더 필요한 단계가 있습니다." : "필요한 확인을 마쳤습니다. 지금 할 일을 진행하세요."}</p>`
+    : `<p class="topic">상담 목적 확인 중</p><p class="topicsub muted">고객이 어떤 업무로 연락했는지 아직 분명하지 않습니다.</p>`;
+  const body = paths.map(p => (paths.length > 1 ? `<div class="path-name">${esc(p.topic)}</div>` : "") + stepper(p)).join("");
+  const complaintSignal = complaints.length ? `<p class="also">고객 불만 신호: ${esc(complaints.flatMap(p => p.steps.map(s => s.choice)).filter(Boolean).join(", ") || "확인 필요")}</p>` : "";
+  const why = `<details class="why"><summary>AI 판단 근거</summary><table>
+    ${(r.topics || []).map(x => `<tr><td>${esc(x.topic)}</td><td>${esc(x.choice)}</td><td>${Math.round(x.probability*100)}%</td></tr>`).join("")}
+    ${paths.flatMap(p => p.steps.map(s => `<tr><td>${esc(s.title)}</td><td>${esc(s.choice)}</td><td>${Math.round(s.probability*100)}%</td></tr>`)).join("")}</table>
+    <p>퍼센트는 AI가 고른 답의 비중이며 정확도를 뜻하지 않습니다. 분기 기준(${esc(r.version)})은 시연용 초안입니다. 분석 모델: ${esc(S.routing.model)}</p></details>`;
+  el.innerHTML = head + body + complaintSignal + (unsure.length ? `<p class="also">다른 문의도 있는지 확인하세요: ${esc(unsure.join(", "))}</p>` : "") + feelHtml() + why;
+}
+
+function renderCoach(){
+  const el = $("#coach"), latest = S.finals.at(-1)?.id;
+  // 할 일은 분기 설정의 검증된 문구만 사용한다. 소형 LLM(Coach)은 화자 혼동·근거 없는 약속을 만들 수 있어 참고 메모로만 보여 준다.
+  const fresh = S.routing && S.routing.source_event_id === latest;
+  $("#coachStatus").innerHTML = S.finals.length && !fresh && S.status === "active" && !S.errors.decider ? '<span class="spin"></span>새 대화 반영 중' : S.routingAt ? `${hm(S.routingAt)} 갱신` : "";
+  $("#todoTitle").textContent = S.status === "completed" ? "상담 마무리" : "지금 할 일";
+  if (S.status === "completed") return renderWrapUp();
+  if (!S.sid) return el.innerHTML = `<p class="empty">상담이 시작되면 고객에게 할 질문과 업무시스템에서 확인할 일을 이곳에 정리합니다.</p>`;
+  const r = S.routing?.result, allPaths = r?.paths || [], {work:paths} = splitComplaintPaths(allPaths);
+  const questions = uniq([...paths.filter(p => p.status === "추가 확인 필요").map(p => p.next_question), paths.length ? "" : r?.next_question]);
+  const actions = uniq(paths.map(p => p.action));
+  if (!r) return el.innerHTML = `<p class="empty">${S.finals.length ? '<span class="spin"></span>대화를 듣고 할 일을 정리하고 있습니다.' : "대화를 기다리고 있습니다."}</p>`;
+  let n = 0;
+  const ask = questions.length ? `<div class="step"><h3><span class="n">${++n}</span>고객에게 이렇게 물어보세요</h3><div class="say">${esc(questions[0])}</div>
+    ${questions.length > 1 ? `<p class="small muted" style="margin:10px 0 0">이어서 확인할 질문</p><ul class="say-more">${questions.slice(1).map(q => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}</div>` : "";
+  const check = actions.length ? `<div class="step"><h3><span class="n">${++n}</span>업무시스템에서 확인하세요</h3>
+    ${actions.map((a, i) => `<div class="check"><span>${esc(a)}</span>${S.registered.has(a) ? '<button class="done" disabled>후속 업무 등록됨</button>' : `<button data-act="${i}">후속 업무로 등록</button>`}</div>`).join("")}</div>` : "";
+  const none = !ask && !check ? `<p class="empty">지금 추가로 할 일이 없습니다. 고객의 다음 말을 들어 보세요.</p>` : "";
+  const refs = S.refs || [];
+  const ref = `<details class="step refs"><summary>참고 자료 <span class="small muted">${meta.knowledge === "qdrant" ? "사내 지식베이스" : "샘플 자료"}</span></summary>${refs.length ? refs.map(d => `<details><summary>${esc(d.title)} <span class="small muted">${esc(d.section)}</span></summary><p>${esc(d.snippet)}</p><p class="small muted">출처: ${esc(d.source)}${d.score != null ? `, 유사도 ${d.score}` : ""}</p></details>`).join("")
+    : `<p class="small muted">확인된 참고 자료가 없습니다. 근거가 없는 내용은 고객에게 안내하지 마세요.</p>`}</details>`;
+  const c = S.coach, memoFresh = c && c.source_event_id === latest;
+  const memo = meta.coach_mode === "off" ? "" : `<details class="memo"><summary>AI 메모 <span class="small muted">${!c ? (S.coachState === "failed" ? "만들지 못했습니다" : "준비 중") : memoFresh ? "최신 발화 기준" : "이전 발화 기준"}</span></summary>
+    ${c ? `<p>${esc(c.staff_note)}</p>${c.customer_question ? `<p class="small muted">제안 문장: ${esc(c.customer_question)}</p>` : ""}${(c.action_items || []).length ? `<ul class="small muted">${c.action_items.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}` : ""}
+    <p class="small muted">AI 참고 메모입니다. 업무시스템 확인 전에는 일정·결과를 고객에게 약속하지 마세요.</p></details>`;
+  el.innerHTML = ask + check + none + ref + memo;
+  el.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
+    const title = actions[b.dataset.act];
+    await api("POST", "/api/v1/crm/tasks", {session_id: S.sid, title, source: "ai_suggested", assigned_employee_id: $("#me").value || null});
+    S.registered.add(title); renderCoach(); toast("후속 업무로 등록했습니다.", true);
+  });
+}
+function renderClosingSummary(text){
+  const sections = text.split("\n## ").slice(1).map(part => {
+    const [title, ...items] = part.split("\n");
+    return `<section class="sum-section"><h3>${esc(title)}</h3><ul>${items.filter(x => x.startsWith("- ")).map(x => `<li>${esc(x.slice(2))}</li>`).join("")}</ul></section>`;
+  });
+  return sections.length ? `<div class="closing-summary">${sections.join("")}</div>` : `<div class="summary">${esc(text)}</div>`;
+}
+function renderWrapUp(){
+  $("#coachStatus").textContent = "";
+  $("#coach").innerHTML = `<div class="step"><h3>상담 종료 정리 <span class="small muted">직원 검토 필요</span></h3>
+    ${S.summary === null ? '<p class="muted"><span class="spin"></span>요약을 만드는 중입니다.</p>'
+      : S.summary ? `${renderClosingSummary(S.summary)}<p class="small muted">${S.reviewStatus && S.reviewStatus !== "unreviewed" ? `상담 기록에서 ${RV_KO[S.reviewStatus]} 처리했습니다.` : "대화·분기·등록 업무를 바탕으로 정리했습니다. 업무시스템 확인 결과를 반영한 뒤 확정하세요."}</p>`
+      : '<p class="muted">요약을 만들지 못했습니다. 대화 기록은 저장됐습니다.</p>'}</div>
+    <div class="step"><h3>등록한 후속 업무</h3>${S.registered.size ? [...S.registered].map(a => `<div class="check"><span>${esc(a)}</span></div>`).join("") : '<p class="small muted">없음</p>'}</div>
+    <button class="primary big" id="toReview">상담 기록에서 검토하기</button>`;
+  $("#toReview").onclick = () => { openTab("crm"); loadDetail(S.sid); };
+}
+
+/* ================= 상담 기록 (CRM) ================= */
+const ST_KO = {active:"진행 중", paused:"보류", completed:"종료", failed:"실패", created:"생성"};
+const RV_KO = {unreviewed:"검토 전", reviewed:"검토 완료", corrected:"정정됨"};
+const TASK_KO = {open:"할 일", in_progress:"진행 중", blocked:"막힘", completed:"완료", cancelled:"취소"};
+const PRI_KO = {low:"낮음", normal:"보통", high:"높음"};
+let crmPage = 1, selected = null;
+const empName = id => (employees.find(e => e.employee_id === id) || {}).display_name || "-";
+const custName = id => (customers.find(c => c.customer_id === id) || {}).display_name || "-";
+const FIELD_KO = {assigned_employee_id:"담당", customer_id:"고객", review_status:"검토 상태", final_topic:"확정 주제", final_summary:"확정 요약",
+  status:"상태", title:"제목", due_at:"기한", priority:"우선순위", description:"설명", display_name:"이름", memo:"고객 메모", note_id:"메모"};
+const ACT_KO = {assign:"배정 변경", review:"검토", note_add:"메모 추가", create:"등록", update:"수정"};
+function auditText(a){
+  const v = (k, x) => k === "assigned_employee_id" ? empName(x) : k === "customer_id" ? custName(x) : k === "review_status" ? (RV_KO[x] || x)
+    : k === "status" ? (TASK_KO[x] || x) : k === "priority" ? (PRI_KO[x] || x) : k === "due_at" && x ? t(x) : k === "note_id" ? "" : String(x ?? "없음").slice(0, 40);
+  const parts = Object.entries(a.after_value || {}).filter(([k]) => k in FIELD_KO && k !== "session_id").map(([k, x]) => `${FIELD_KO[k]}${v(k, x) ? " " + v(k, x) : ""}`);
+  return `${ACT_KO[a.action] || a.action}${parts.length ? ": " + parts.join(", ") : ""}`;
+}
+async function loadCrm(){
+  const d = await api("GET", "/api/v1/crm/dashboard");
+  $("#dash").innerHTML = [["전체 상담", d.sessions_total], ["진행 중", d.sessions_active], ["검토 전 종료 상담", d.sessions_unreviewed], ["진행 중 후속 업무", d.tasks_open], ["기한 지난 업무", d.tasks_overdue]].map(([k,v]) => `<div class="stat">${k}<b>${v}</b></div>`).join("");
+  const q = new URLSearchParams({page_no: crmPage, size: 20});
+  [["status","#fStatus"],["topic","#fTopic"],["employee_id","#fEmp"],["task_status","#fTask"],["customer_id","#fCust"]].forEach(([k,id]) => $(id).value && q.set(k, $(id).value));
+  // 화면의 날짜는 현지(KST) 기준 → 서버에는 UTC로 보낸다
+  if ($("#fFrom").value) q.set("date_from", new Date($("#fFrom").value + "T00:00:00").toISOString()); if ($("#fTo").value) q.set("date_to", new Date($("#fTo").value + "T23:59:59").toISOString());
+  const r = await api("GET", "/api/v1/crm/sessions?" + q);
+  $("#sessRows").innerHTML = r.items.map(s => `<tr class="click" data-sid="${s.session_id}"><td>${t(s.started_at)}</td><td>${ST_KO[s.status] || esc(s.status)}</td><td>${esc(s.final_topic || s.current_topic || "-")}</td><td>${esc(s.customer_name || "-")}</td><td>${esc(s.employee_name || "-")}</td><td>${RV_KO[s.review_status] || esc(s.review_status)}</td><td>${s.tasks_open}</td></tr>`).join("") || '<tr><td colspan=7 class="muted">조건에 맞는 상담이 없습니다.</td></tr>';
+  $("#sessRows").querySelectorAll("tr[data-sid]").forEach(tr => tr.onclick = () => loadDetail(tr.dataset.sid));
+  const pages = Math.max(1, Math.ceil(r.total / r.size));
+  $("#pager").innerHTML = `<button ${crmPage <= 1 ? "disabled" : ""} id="pPrev" aria-label="이전 페이지">‹</button> ${crmPage}/${pages} (${r.total}건) <button ${crmPage >= pages ? "disabled" : ""} id="pNext" aria-label="다음 페이지">›</button>`;
+  $("#pPrev").onclick = () => { crmPage--; loadCrm(); }; $("#pNext").onclick = () => { crmPage++; loadCrm(); };
+  loadTasks();
+  if ($("#fCust").value) { const c = await api("GET", `/api/v1/crm/customers/${$("#fCust").value}`); $("#custTimeline").innerHTML = `<b>${esc(c.display_name)}</b> <span class="muted">${esc(c.customer_type || "")}</span><ol>${c.timeline.map(s => `<li>${t(s.started_at)}, ${esc(s.final_topic || s.current_topic || "주제 미확정")} (${ST_KO[s.status] || esc(s.status)})</li>`).join("") || "<li class='muted'>상담 이력 없음</li>"}</ol>`; }
+  if (selected) loadDetail(selected);
+}
+$("#crmSearch").onclick = () => { crmPage = 1; loadCrm(); };
+$("#overdueOnly").onchange = loadTasks;
+async function loadTasks(){
+  const rows = await api("GET", "/api/v1/crm/tasks" + ($("#overdueOnly").checked ? "?overdue_only=true" : ""));
+  $("#taskRows").innerHTML = rows.map(x => `<tr class="click" data-sid="${x.session_id}"><td>${esc(x.title)}</td><td>${esc(custName(x.customer_id))}</td><td>${esc(empName(x.assigned_employee_id))}</td><td class="${x.overdue ? "err" : ""}">${x.due_at ? t(x.due_at) : "-"}${x.overdue ? " (지남)" : ""}</td><td>${PRI_KO[x.priority]}</td>
+    <td><select data-task="${x.task_id}" aria-label="업무 상태">${Object.entries(TASK_KO).map(([k,v]) => `<option value="${k}" ${k === x.status ? "selected" : ""}>${v}</option>`).join("")}</select></td><td>${x.source === "ai_suggested" ? "AI 제안" : "직접 등록"}</td></tr>`).join("") || '<tr><td colspan=7 class="muted">후속 업무가 없습니다.</td></tr>';
+  $("#taskRows").querySelectorAll("select").forEach(s => { s.onclick = e => e.stopPropagation(); s.onchange = async () => { await api("PATCH", `/api/v1/crm/tasks/${s.dataset.task}`, {status: s.value}); loadCrm(); }; });
+  $("#taskRows").querySelectorAll("tr[data-sid]").forEach(tr => tr.onclick = () => loadDetail(tr.dataset.sid));
+}
+async function loadDetail(sid){
+  selected = sid; const d = await api("GET", `/api/v1/crm/sessions/${sid}`);
+  document.querySelectorAll("#sessRows tr").forEach(tr => tr.classList.toggle("sel", tr.dataset.sid === sid));
+  const route = [...d.analyses].reverse().find(a => a.analysis_type === "routing");
+  const sugg = d.suggestions.filter(s => s.generation_status === "success").pop();
+  $("#detail").innerHTML = `<div class="chips"><span class="small muted">담당</span><select id="dEmp"><option value="">미배정</option>${employees.map(e => `<option value="${e.employee_id}" ${e.employee_id === d.assigned_employee_id ? "selected" : ""}>${esc(e.display_name)}</option>`).join("")}</select>
+      <span class="small muted">고객</span><select id="dCust"><option value="">연결 안 됨</option>${customers.map(c => `<option value="${c.customer_id}" ${c.customer_id === d.customer_id ? "selected" : ""}>${esc(c.display_name)}</option>`).join("")}</select><button id="dAssign">배정 저장</button></div>
+    ${d.final_summary ? `<h3>확정 요약 (${RV_KO[d.review_status]})</h3><div class="summary">${esc(d.final_summary)}</div>` : ""}
+    <h3>AI 분석 원본 (${RV_KO[d.review_status]})</h3><p>주제 ${esc(d.current_topic || "-")}, 단계 ${esc(d.current_stage || "-")}${route?.next_step ? `<br><span class="small muted">${esc(route.next_step)}</span>` : ""}</p>
+    <p class="small" style="white-space:pre-line"><span class="badge">AI 요약</span> ${esc(d.ai_summary || "없음")}</p>
+    ${sugg ? `<p class="small"><span class="badge">마지막 AI 안내</span> ${esc(sugg.staff_note)}</p>` : ""}
+    <h3>직원 검토와 정정 (AI 원본은 그대로 보존)</h3>
+    <input id="rTopic" placeholder="확정 주제" value="${esc(d.final_topic || "")}" style="margin-bottom:6px"><textarea id="rSummary" placeholder="직원이 확정한 요약" style="min-height:120px">${esc(d.final_summary || (d.ai_summary || "").replace("[AI 생성 요약·직원 확인 필요]", "").trim())}</textarea>
+    <p class="small muted">AI 요약을 미리 채워 두었습니다. 사실과 다른 부분을 고친 뒤 저장하세요.</p>
+    <div class="chips" style="margin-top:6px"><button class="primary" id="rReviewed">검토 완료</button><button id="rCorrected">정정 저장</button></div>
+    <h3>대화 기록 (${d.transcripts.length}문장)</h3>${d.transcripts.map(x => `<div class="small"><b class="who-${x.speaker}">${speakerName(x.speaker)}</b> ${esc(x.text)}</div>`).join("")}
+    <h3>메모</h3>${d.notes.map(n => `<div class="small">${t(n.created_at)} ${esc(empName(n.author_employee_id))}: ${esc(n.note_text)}</div>`).join("") || '<p class="muted small">없음</p>'}
+    <textarea id="noteText" placeholder="상담 메모"></textarea><button id="noteAdd" style="margin-top:6px">메모 추가</button>
+    <h3>후속 업무</h3>${d.tasks.map(x => `<div class="small">${esc(x.title)} (${TASK_KO[x.status]}, ${esc(empName(x.assigned_employee_id))})${x.overdue ? ' <span class="err">기한 지남</span>' : ""}</div>`).join("") || '<p class="muted small">없음</p>'}
+    <div class="chips" style="margin-top:6px"><input id="tTitle" placeholder="업무 제목"><input type="datetime-local" id="tDue" aria-label="기한"><select id="tPri"><option value="normal">보통</option><option value="high">높음</option><option value="low">낮음</option></select><button id="tAdd">업무 추가</button></div>
+    <h3>처리 중 오류</h3>${uniqBy(d.events.filter(e => e.type === "error" && e.data.operation !== "coach.http"), e => e.data.trace_id + e.data.service).map(e => `<div class="small err">${t(e.at)} ${SVC_KO[e.data.service] || esc(e.data.service)}: ${esc(ERR_KO[e.data.error_code] || e.data.error_code)}</div>`).join("") || '<p class="muted small">없음</p>'}
+    <h3>외부 CRM(Twenty) 전송</h3>${d.twenty.enabled ? `${d.twenty.links.map(l => `<div class="small">${{companies:"고객", aiccConsultations:"상담", tasks:"후속 업무"}[l.twenty_object] || esc(l.twenty_object)} ${l.last_error ? `<span class="err">전송 실패</span>` : l.synced_at ? `전송됨 ${t(l.synced_at)}` : "대기"}</div>`).join("") || '<p class="muted small">아직 보내지 않았습니다. 상담 종료·검토 때 자동으로 보냅니다.</p>'}<button id="twSync" style="margin-top:6px">다시 보내기</button>` : '<p class="muted small">외부 CRM 연동이 꺼져 있습니다.</p>'}
+    <h3>변경 이력</h3>${d.audit.map(a => `<div class="small">${t(a.occurred_at)} ${esc(empName(a.actor_employee_id))}: ${esc(auditText(a))}</div>`).join("") || '<p class="muted small">없음</p>'}`;
+  if ($("#twSync")) $("#twSync").onclick = async () => { await api("POST", `/api/v1/crm/sessions/${sid}/sync-twenty`); toast("외부 CRM으로 보냈습니다.", true); loadDetail(sid); };
+  $("#dAssign").onclick = async () => { await api("PATCH", `/api/v1/crm/sessions/${sid}/assignment`, {assigned_employee_id: $("#dEmp").value || null, customer_id: $("#dCust").value || null}); toast("배정을 저장했습니다.", true); loadCrm(); };
+  const review = st => async () => { await api("PATCH", `/api/v1/crm/sessions/${sid}/review`, {review_status: st, final_topic: $("#rTopic").value || null, final_summary: $("#rSummary").value || null}); toast(st === "reviewed" ? "검토를 완료했습니다." : "정정을 저장했습니다.", true); loadCrm(); };
+  $("#rReviewed").onclick = review("reviewed"); $("#rCorrected").onclick = review("corrected");
+  $("#noteAdd").onclick = async () => { if (!$("#me").value) return toast("위에서 상담원을 먼저 고르세요."); await api("POST", `/api/v1/crm/sessions/${sid}/notes`, {note_text: $("#noteText").value, author_employee_id: $("#me").value}); loadDetail(sid); };
+  $("#tAdd").onclick = async () => { await api("POST", "/api/v1/crm/tasks", {session_id: sid, title: $("#tTitle").value, priority: $("#tPri").value, due_at: $("#tDue").value ? new Date($("#tDue").value).toISOString() : null, assigned_employee_id: $("#me").value || null}); loadCrm(); };
+}
+
+/* ================= 시스템 상태 ================= */
+const MODE_KO = {mock:"샘플 응답", http:"실제 모델", "local-json":"샘플 자료", local:"샘플 자료", qdrant:"사내 지식베이스", twenty:"Twenty", internal:"실제 모델", api:"외부 API"};
+const fmt = v => v == null ? '<span class="muted">데이터 부족</span>' : v;
+function chart(id, buckets, keys, empty){
+  const target = $(id), values = buckets.flatMap(b => keys.map(k => b[k])).filter(v => v != null);
+  if (!values.length || values.every(v => !v)) { target.innerHTML = `<div class="chart-empty">${empty}</div>`; return; }
+  const max = Math.max(...values, 1), w = 640, h = 158, pad = 8;
+  const points = key => buckets.map((b, i) => `${(i / (buckets.length - 1) * (w - pad * 2) + pad).toFixed(1)},${(h - pad - ((b[key] || 0) / max * (h - pad * 2))).toFixed(1)}`).join(" ");
+  target.innerHTML = `<svg class="apm-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="시간별 ${keys.join(', ')} 추이"><path class="grid" d="M${pad} ${h*.25}H${w-pad}M${pad} ${h*.5}H${w-pad}M${pad} ${h*.75}H${w-pad}"/><text x="${pad}" y="11">${max}</text><text x="${pad}" y="${h-3}">0</text><text x="${pad+18}" y="${h-3}">${hm(buckets[0].at)}</text><text text-anchor="end" x="${w-pad}" y="${h-3}">${hm(buckets.at(-1).at)}</text>${keys.map((k,i) => `<polyline class="line ${i ? "error" : ""}" points="${points(k)}"/>`).join("")}</svg>`;
+}
+async function loadMon(){
+  try {
+    const sid = $("#mSession").value.trim();
+    const ov = await api("GET", "/api/v1/monitoring/overview" + (sid ? `?session_id=${encodeURIComponent(sid)}` : ""));
+    $("#svcCards").innerHTML = ov.services.map(s => {
+      const off = s.mode === "off";
+      const label = off ? "사용 안 함" : {healthy:"정상", degraded:"일부 오류", unavailable:"연결 안 됨", unknown:"확인 전"}[s.status] || s.status;
+      const note = off ? (s.service === "crm" ? "TWENTY_ENABLED=false" : "설정에서 꺼짐")
+        : s.status === "unknown" ? "아직 호출 기록이 없습니다" : `${MODE_KO[s.mode] || esc(s.mode || "")} ${s.last_checked_at ? t(s.last_checked_at) : ""}`;
+      return `<div class="stat">${SVC_KO[s.service] || s.service}<b class="s-${off ? "unknown" : s.status}">${label}</b><span class="small muted">${note}</span></div>`;
+    }).join("");
+    const series = await api("GET", "/api/v1/monitoring/series?minutes=" + $("#mMinutes").value + (sid ? `&session_id=${encodeURIComponent(sid)}` : ""));
+    const sm = series.summary, errorRate = sm.requests ? ((sm.errors + sm.timeouts) / sm.requests * 100).toFixed(1) : "0.0";
+    $("#monKpis").innerHTML = `<div class="mon-kpi"><small>선택 기간 요청</small><b>${sm.requests}</b></div><div class="mon-kpi"><small>오류율</small><b class="${errorRate > 0 ? "bad" : ""}">${errorRate}%</b></div><div class="mon-kpi"><small>p95 지연시간</small><b>${sm.p95_ms == null ? "–" : sm.p95_ms + "ms"}</b></div><div class="mon-kpi"><small>타임아웃</small><b class="${sm.timeouts ? "bad" : ""}">${sm.timeouts}</b></div>`;
+    chart("#reqChart", series.buckets, ["requests", "errors"], "선택 기간에 호출 기록이 없습니다.");
+    chart("#latChart", series.buckets, ["p95_ms"], "선택 기간에 지연시간 기록이 없습니다.");
+    const unit = series.bucket_seconds < 60 ? `${series.bucket_seconds}초` : `${series.bucket_seconds / 60}분`;
+    $("#reqChartNote").textContent = `${unit} 단위`;
+    $("#latChartNote").textContent = `${unit} 단위`;
+    const row = (k, x) => `<tr><td>${esc(k)}</td><td>${x.requests}</td><td>${x.success}</td><td>${x.errors}</td><td>${x.timeouts}</td><td>${fmt(x.avg_ms)}</td><td>${fmt(x.p50_ms)}</td><td>${fmt(x.p95_ms)}</td></tr>`;
+    $("#monStats").innerHTML = `<table><thead><tr><th>구분</th><th>요청</th><th>성공</th><th>실패</th><th>타임아웃</th><th>평균ms</th><th>p50</th><th>p95</th></tr></thead><tbody>
+      ${row("최근 1분", ov.last_1m)}${row("최근 5분", ov.last_5m)}${Object.entries(ov.by_service).map(([k,v]) => row(k, v)).join("")}${Object.entries(ov.by_operation).map(([k,v]) => row("  " + k, v)).join("")}</tbody></table>`;
+    const errs = await api("GET", "/api/v1/monitoring/errors?minutes=" + $("#mMinutes").value);
+    $("#errRows").innerHTML = errs.map(e => `<tr class="click" data-trace="${e.trace_id}"><td>${t(e.started_at)}</td><td>${esc(e.service_name)}</td><td>${esc(e.operation)}</td><td class="err">${esc(e.error_code)}</td><td>${e.trace_id.slice(0,8)}</td></tr>`).join("") || '<tr><td colspan=5 class="muted">오류 없음</td></tr>';
+    const q = new URLSearchParams({minutes: $("#mMinutes").value});
+    [["service","#mService"],["status","#mStatus"]].forEach(([k,id]) => $(id).value && q.set(k, $(id).value));
+    if (sid) q.set("session_id", sid); if ($("#mTrace").value.trim()) q.set("trace_id", $("#mTrace").value.trim());
+    const reqs = await api("GET", "/api/v1/monitoring/requests?" + q);
+    $("#reqRows").innerHTML = reqs.map(r => `<tr class="click" data-trace="${r.trace_id}"><td>${t(r.started_at)}</td><td>${esc(r.service_name)}</td><td>${esc(r.operation)}</td><td>${r.call_kind === "http" ? "HTTP" : "내부 단계"}</td><td class="${r.status === "success" ? "" : "err"}">${esc(r.status)}${r.error_code ? " " + esc(r.error_code) : ""}</td><td>${r.duration_ms}</td></tr>`).join("") || '<tr><td colspan=6 class="muted">호출 없음</td></tr>';
+    document.querySelectorAll("#mon tr[data-trace]").forEach(tr => tr.onclick = () => showTrace(tr.dataset.trace));
+    $("#monUpdated").textContent = "마지막 갱신 " + new Date().toLocaleTimeString();
+  } catch (e) { $("#monUpdated").textContent += " (갱신 실패)"; }
+}
+async function showTrace(id){
+  const spans = await api("GET", `/api/v1/monitoring/traces/${id}`);
+  const t0 = Math.min(...spans.map(s => Date.parse(s.started_at))), t1 = Math.max(...spans.map(s => Date.parse(s.ended_at)));
+  const total = Math.max(1, t1 - t0);
+  $("#traceView").innerHTML = `<p>trace ${esc(id)}, 총 ${total}ms</p><table>${spans.map(s => `<tr><td>${s.parent_span_id ? "└ " : ""}${esc(s.service_name)}<br><span class="muted">${esc(s.operation)}</span></td><td style="width:50%"><div class="wf"><span class="${s.status}" style="left:${(Date.parse(s.started_at)-t0)/total*100}%;width:${Math.max(1, s.duration_ms/total*100)}%"></span></div></td><td>${s.duration_ms}ms<br><span class="${s.status === "success" ? "muted" : "err"}">${esc(s.status)} ${esc(s.error_code || "")}</span></td></tr>`).join("")}</table>`;
+}
+["#mService","#mStatus","#mMinutes"].forEach(id => $(id).onchange = loadMon);
+setInterval(() => { if ($("#mon").classList.contains("active")) loadMon(); }, 3000);
+
+/* ================= 시작 ================= */
+(async () => {
+  meta = await api("GET", "/api/v1/meta");
+  const real = meta.asr !== "mock";
+  $("#modeBadge").textContent = real ? "실제 AI 모델" : "시연 모드";
+  $("#modeBadge").title = `음성 인식 ${meta.asr}, 상담 분석 ${meta.decider}, 직원 안내 ${meta.coach_mode}`;
+  $("#modeBadge").classList.toggle("mock", !real);
+  $("#scenario").innerHTML = meta.scenarios.map(s => `<option value="${s}">${SCEN_KO[s] || s}</option>`).join("");
+  employees = await api("GET", "/api/v1/crm/employees"); customers = (await api("GET", "/api/v1/crm/customers?size=100")).items;
+  $("#me").innerHTML = employees.map(e => `<option value="${e.employee_id}">${esc(e.display_name)} (${esc(e.department_name)})</option>`).join("");
+  $("#fEmp").innerHTML += employees.map(e => `<option value="${e.employee_id}">${esc(e.display_name)}</option>`).join("");
+  $("#fCust").innerHTML += customers.map(c => `<option value="${c.customer_id}">${esc(c.display_name)}</option>`).join("");
+  $("#fTopic").innerHTML += meta.topics.map(x => `<option>${esc(x)}</option>`).join("");
+  $("#mService").innerHTML += Object.keys(SVC_KO).map(s => `<option value="${s}">${SVC_KO[s]}</option>`).join("");
+  setButtons(); render();
+})();
+</script>
+</body>
+</html>

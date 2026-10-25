@@ -1,0 +1,83 @@
+{
+  "version": "closing-summary-v1",
+  "purpose": "상담 종료 자동 정리가 확정된 상담 사실을 보존하고, 미확인 사항·후속 업무를 빠뜨리거나 만들어 내지 않는지 검증한다.",
+  "policy": [
+    "모든 발화는 가상 시나리오이며 개인정보를 포함하지 않는다.",
+    "정답은 직원 검토용 최소 사실이다. 승인·한도·처리 시점 같은 업무시스템 확인 전 결과는 정답에 넣지 않는다.",
+    "향후 자유서술 요약 모델을 도입하면 must_include, must_not_include, expected_review를 동일하게 채점한다."
+  ],
+  "cases": [
+    {
+      "id": "extension_complete",
+      "description": "만기 전 전액 연장과 정상 영업·무연체를 확인한 완료 상담",
+      "transcript": [
+        {"speaker": "customer", "text": "작년에 받은 보증의 만기가 두 달 남았고 전액 연장하고 싶습니다."},
+        {"speaker": "agent", "text": "현재 정상 영업 중이시고 연체는 없으신가요?"},
+        {"speaker": "customer", "text": "네, 정상 영업 중이고 연체는 없습니다."}
+      ],
+      "register_route_action": true,
+      "must_include": ["만기·연장", "만기 시점 만기 전", "만기 시 계획 전액 연장", "영업·상환 상황 정상"],
+      "must_not_include": ["승인", "연장 가능"],
+      "expected_review": "업무시스템에서 만기일·보증 내역을 확인한 뒤 직원이 확정한다."
+    },
+    {
+      "id": "progress_callback_complaint",
+      "description": "신청 후 연락 지연과 재연락 요청이 함께 있는 민원성 진행상태 상담",
+      "transcript": [
+        {"speaker": "customer", "text": "지난달 온라인으로 신청했는데 아직 연락이 없어서 너무 답답합니다."},
+        {"speaker": "agent", "text": "언제 신청하셨는지 확인하겠습니다."},
+        {"speaker": "customer", "text": "담당자분이 다시 연락 주셨으면 좋겠습니다."}
+      ],
+      "register_route_action": true,
+      "must_include": ["진행상태 문의", "신청 여부 신청했다고 진술", "문의 성격 지연·재연락 요청", "고객 불만 신호: 지연 불만 응대"],
+      "must_not_include": ["자금 필요 시점", "처리 완료", "내일까지"],
+      "expected_review": "접수일·진행 단계·지연 사유·담당자 배정 여부를 업무시스템에서 확인한다."
+    },
+    {
+      "id": "overdue_installment",
+      "description": "연체 사실과 분할상환 요청을 확인한 상담",
+      "transcript": [
+        {"speaker": "customer", "text": "매출이 줄어서 이번 달 상환을 못 했고 연체가 된 것 같습니다."},
+        {"speaker": "agent", "text": "어떤 도움이 필요하신가요?"},
+        {"speaker": "customer", "text": "한 번에 갚기 어려워 나눠서 갚고 싶습니다."}
+      ],
+      "register_route_action": true,
+      "must_include": ["상환·연체", "상환 상태 연체 중", "연체 고객 요청 분할·유예"],
+      "must_not_include": ["분할상환 승인", "감면 승인"],
+      "expected_review": "연체 내역과 분할·유예 가능 여부는 담당자가 업무시스템에서 확인한다."
+    },
+    {
+      "id": "documents_and_application",
+      "description": "신규 보증 신청에 필요한 서류 목록을 묻는 복수 주제 상담",
+      "transcript": [
+        {"speaker": "customer", "text": "보증을 새로 신청하려는데 어떤 서류가 필요한지 궁금합니다."},
+        {"speaker": "agent", "text": "현재 사업을 운영 중이신가요?"},
+        {"speaker": "customer", "text": "네, 가게를 운영하고 있고 운영비가 필요합니다."}
+      ],
+      "register_route_action": false,
+      "must_include": ["서류 문의", "보증 신청", "서류 문의 유형 목록 확인", "서류 용도 신규 신청"],
+      "must_not_include": ["서류가 확정", "승인"],
+      "expected_review": "신청 유형과 업무시스템의 공식 서류 목록을 확인한다."
+    },
+    {
+      "id": "extension_incomplete",
+      "description": "만기 연장 의도만 있고 만기 상태가 확인되지 않은 미완료 상담",
+      "transcript": [
+        {"speaker": "customer", "text": "기존 보증을 연장하고 싶은데요."}
+      ],
+      "register_route_action": false,
+      "must_include": ["만기·연장", "확정된 확인 항목이 없습니다.", "만기일이 언제인가요? 이미 만기가 지났나요?"],
+      "must_not_include": ["만기 전", "전액 연장", "연장 가능"],
+      "expected_review": "만기 상태를 먼저 확인한 뒤에만 후속 절차를 안내한다."
+    },
+    {
+      "id": "empty_consultation",
+      "description": "발화 없이 종료된 상담",
+      "transcript": [],
+      "register_route_action": false,
+      "must_include": ["상담 목적이 확인되지 않았습니다.", "확정된 확인 항목이 없습니다.", "대화 0문장", "등록한 후속 업무가 없습니다."],
+      "must_not_include": ["승인", "고객이"],
+      "expected_review": "상담원은 대화 기록 누락 여부를 확인한다."
+    }
+  ]
+}

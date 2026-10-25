@@ -1,0 +1,34 @@
+{
+  "extension": [
+    {"speaker": "customer", "text": "안녕하세요. 저희가 작년에 받은 보증이 있는데요, 이제 만기가 다가와서 연장을 하고 싶어서 전화드렸어요."},
+    {"speaker": "agent", "text": "네, 보증 기한연장 관련 문의시군요. 성함과 사업자등록번호 확인해 주시겠습니까?"},
+    {"speaker": "customer", "text": "네, 사업자등록번호는 비공개입니다."},
+    {"speaker": "agent", "text": "확인되었습니다. 현재 보증 만기일이 언제인지 확인 가능하실까요?"},
+    {"speaker": "customer", "text": "정확한 날짜는 기억이 안 나는데요, 만기가 아직 두 달 정도 남았어요."},
+    {"speaker": "agent", "text": "현재 정상적으로 영업 중이시고 연체는 없으신가요?"},
+    {"speaker": "customer", "text": "네, 장사는 정상적으로 하고 있고 연체는 없어요."}
+  ],
+  "progress": [
+    {"speaker": "customer", "text": "지난달에 보증 신청했는데 아직 아무 연락이 없어서요. 너무 답답하고 화가 나네요."},
+    {"speaker": "agent", "text": "불편을 드려 죄송합니다. 언제 어떤 경로로 신청하셨는지 확인 부탁드립니다."},
+    {"speaker": "customer", "text": "온라인으로 신청했어요. 담당자분이 다시 연락 주셨으면 좋겠어요."}
+  ],
+  "urgent_delay": [
+    {"speaker": "agent", "text": "네 감사합니다. 서울신용보증재단 상담센터입니다."},
+    {"speaker": "customer", "text": "저 보증 신청한 거 어떻게 진행 중인지 확인 좀 하려구요."},
+    {"speaker": "agent", "text": "네, 10월 10일에 신청하셨네요."},
+    {"speaker": "customer", "text": "네 맞아요. 1주일이면 된다더니 왜 이렇게 늦어요?"},
+    {"speaker": "agent", "text": "신청량이 많아 다소 지연된 것 같습니다. 최대한 빨리 진행해서 연락드리겠습니다."},
+    {"speaker": "customer", "text": "내일까지 자금이 꼭 필요한데요."}
+  ],
+  "overdue": [
+    {"speaker": "customer", "text": "보증 받은 대출이 있는데 요즘 매출이 줄어서 이번 달 상환을 못 했어요. 연체가 됐을 것 같아요."},
+    {"speaker": "agent", "text": "많이 걱정되셨겠습니다. 어떤 도움이 필요하신가요?"},
+    {"speaker": "customer", "text": "한 번에 갚기는 어려워서 나눠서 갚을 수 있는지 알고 싶어요."}
+  ],
+  "documents": [
+    {"speaker": "customer", "text": "보증 신청하려고 하는데 어떤 서류가 필요한지 궁금해서요."},
+    {"speaker": "agent", "text": "네, 서류 목록 안내 도와드리겠습니다. 현재 사업을 운영 중이신가요?"},
+    {"speaker": "customer", "text": "네 가게를 운영하고 있고요, 운영비가 좀 필요해서요. 감사합니다."}
+  ]
+}

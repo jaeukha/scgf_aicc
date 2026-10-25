@@ -1,0 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0
+torchvision==0.29.0  # 모델 processor가 import 시 요구(텍스트만 써도)
+transformers==5.19.0
+sentence-transformers==6.1.0
+fastapi==0.116.0
+uvicorn==0.35.0
+pillow==12.3.0  # 텍스트 전용이어도 모델 processor가 import 시 요구
