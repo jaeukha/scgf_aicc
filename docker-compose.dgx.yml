@@ -1,0 +1,5 @@
+services:
+  backend:
+    # Linux Docker containers need this explicit route to the host model server.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

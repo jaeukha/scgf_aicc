@@ -42,6 +42,73 @@ $env:HF_TOKEN = "새_토큰"
 ```
 화자 분리는 최근 45초 음성을 메모리에만 유지해 `화자 1`, `화자 2`를 붙인다. 고객·상담원 역할은 단정하지 않으므로, 역할이 필요한 업무 판단 전에는 상담원이 매핑을 확인해야 한다. 음성 원본은 디스크·DB에 저장하지 않는다.
 
+### 2-2) DGX Spark (Linux ARM64) 실행
+
+DGX Spark에서는 Windows용 `app.py --setup` 및 `scripts/setup_whisperx.ps1`를 실행하지 마세요. DGX Spark는 ARM64 기반 Ubuntu 24.04와 NVIDIA Container Toolkit 환경이므로, 모델 서버는 Linux용 Python 환경에서 별도로 실행합니다.
+
+```bash
+# 0. 호스트 확인: 모두 성공한 뒤에만 다음 단계로 진행
+uname -m                         # aarch64
+nvidia-smi
+docker --version
+nvidia-ctk --version
+
+# 1. 저장소와 백엔드 환경
+git clone https://github.com/jaeukha/scgf_aicc.git
+cd scgf_aicc
+python3 -m venv .venv-app
+. .venv-app/bin/activate
+pip install -r requirements.txt
+python -m alembic upgrade head
+```
+
+모델 서버는 별도 가상환경을 권장합니다. 먼저 DGX Spark에서 지원하는 Linux ARM64 CUDA PyTorch를 NVIDIA 문서 또는 사내 표준 이미지 기준으로 설치하고, `python -c "import torch; print(torch.cuda.is_available())"`가 `True`인지 확인하세요. 그 뒤 WhisperX와 프로젝트 의존성을 설치합니다.
+
+```bash
+python3 -m venv .venv-model
+. .venv-model/bin/activate
+pip install -U pip
+
+# DGX Spark용 CUDA PyTorch를 먼저 설치한다. Windows/cu128 wheel을 쓰지 않는다.
+# 이후 프로젝트 모델 서버 의존성 설치
+pip install -r requirements.txt
+pip install transformers==5.17.0 safetensors==0.8.0 pillow==12.3.0 soundfile>=0.13 \
+  huggingface-hub==1.31.0 pyannote.audio==4.0.7 whisperx==3.8.6
+# --coach를 쓸 때만 추가. ARM64 bitsandbytes가 지원되지 않으면 --coach 없이 시작하거나 COACH_MODE=api를 쓴다.
+pip install accelerate==1.15.0 bitsandbytes==0.50.2
+# WhisperX 설치가 Transformers를 낮췄다면 Decider 호환 버전으로 복구
+pip install --force-reinstall --no-deps transformers==5.17.0 tokenizers==0.23.3 huggingface-hub==1.31.0
+
+# 첫 실행은 --offline 없이 모델을 받는다. 토큰은 셸에만 설정하고 .env/커밋하지 않는다.
+export HF_TOKEN='Hugging_Face_read_token'
+python model_server.py --host 0.0.0.0 --port 8101 --coach --diarize
+```
+
+`0.0.0.0:8101`은 인증 없는 내부 모델 API입니다. Docker 백엔드가 필요할 때만 사설망·방화벽 범위에서 열고, 호스트 백엔드 실행에서는 `--host 127.0.0.1`을 사용하세요.
+
+모델 서버와 백엔드를 모두 호스트에서 실행하는 가장 단순한 경로입니다.
+
+```bash
+# 별도 터미널
+. .venv-app/bin/activate
+export PROVIDER_MODE=local COACH_MODE=internal
+export ASR_BASE_URL=http://127.0.0.1:8101
+export DECIDER_BASE_URL=http://127.0.0.1:8101
+export COACH_BASE_URL=http://127.0.0.1:8101
+uvicorn aicc.main:app --host 0.0.0.0 --port 8000
+
+curl http://127.0.0.1:8101/health
+curl http://127.0.0.1:8000/health/ready
+```
+
+백엔드와 PostgreSQL만 Docker Compose로 실행할 때는 `.env`에 위 `*_BASE_URL`을 `http://host.docker.internal:8101`로 설정하고 다음처럼 DGX Spark 오버라이드를 함께 사용합니다.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dgx.yml up --build
+```
+
+운영 전에는 샘플 음성으로 ASR·화자 분리·Coach·모니터링을 모두 확인하고, `docs/dgx_spark_checklist.md`의 ARM64 의존성 및 VRAM 점검 항목을 완료하세요. DGX Spark 환경에서의 전체 모델 조합은 아직 실기기 검증 전입니다.
+
 ### 3) Docker Compose (PostgreSQL)
 ```powershell
 copy .env.example .env
